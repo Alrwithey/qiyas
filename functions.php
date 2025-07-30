@@ -1,439 +1,480 @@
 <?php
-// الكود الكامل والنهائي. مطابق للكود الأصلي مع إضافة دالة جديدة فقط.
-require_once __DIR__ . '/db.php';
+require_once 'db.php';
 
-// --- Authentication Functions ---
-function is_logged_in() {
-    return isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true;
+
+
+
+// دوال إدارة أنظمة القياس
+function createSurveySystem($data) {
+    global $db;
+    
+    // التحقق من عدم تكرار الـ slug
+    $existingSystem = $db->fetchOne("SELECT id FROM survey_systems WHERE system_slug = ?", [$data['system_slug']]);
+    if ($existingSystem) {
+        throw new Exception("الرابط المختصر مستخدم مسبقاً");
+    }
+    
+    return $db->insert('survey_systems', $data);
 }
 
-function require_login() {
-    if (!is_logged_in()) {
-        header("location: login.php");
+function updateSurveySystem($id, $data) {
+    global $db;
+    
+    // التحقق من عدم تكرار الـ slug (باستثناء النظام الحالي)
+    if (isset($data['system_slug'])) {
+        $existingSystem = $db->fetchOne("SELECT id FROM survey_systems WHERE system_slug = ? AND id != ?", [$data['system_slug'], $id]);
+        if ($existingSystem) {
+            throw new Exception("الرابط المختصر مستخدم مسبقاً");
+        }
+    }
+    
+    return $db->update('survey_systems', $data, 'id = ?', [$id]);
+}
+
+function deleteSurveySystem($id) {
+    global $db;
+    return $db->delete('survey_systems', 'id = ?', [$id]);
+}
+
+function getSurveySystem($id) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM survey_systems WHERE id = ?", [$id]);
+}
+
+function getSurveySystemBySlug($slug) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM survey_systems WHERE system_slug = ? AND is_active = 1", [$slug]);
+}
+
+function getAllSurveySystems() {
+    global $db;
+    return $db->fetchAll("SELECT * FROM survey_systems ORDER BY created_date DESC");
+}
+
+function getActiveSurveySystems() {
+    global $db;
+    return $db->fetchAll("SELECT * FROM survey_systems WHERE is_active = 1 ORDER BY created_date DESC");
+}
+
+// دوال إدارة البرامج
+function createProgram($surveySystemId, $data) {
+    global $db;
+    $data['survey_system_id'] = $surveySystemId;
+    return $db->insert('programs', $data);
+}
+
+function updateProgram($id, $data) {
+    global $db;
+    return $db->update('programs', $data, 'id = ?', [$id]);
+}
+
+function deleteProgram($id) {
+    global $db;
+    return $db->delete('programs', 'id = ?', [$id]);
+}
+
+function getProgram($id) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM programs WHERE id = ?", [$id]);
+}
+
+function getProgramsBySurveySystem($surveySystemId) {
+    global $db;
+    return $db->fetchAll("SELECT * FROM programs WHERE survey_system_id = ? ORDER BY program_order ASC", [$surveySystemId]);
+}
+
+// دوال إدارة الأسئلة
+function createQuestion($surveySystemId, $data) {
+    global $db;
+    $data['survey_system_id'] = $surveySystemId;
+    return $db->insert('questions', $data);
+}
+
+function updateQuestion($id, $data) {
+    global $db;
+    return $db->update('questions', $data, 'id = ?', [$id]);
+}
+
+function deleteQuestion($id) {
+    global $db;
+    return $db->delete('questions', 'id = ?', [$id]);
+}
+
+function getQuestion($id) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM questions WHERE id = ?", [$id]);
+}
+
+function getQuestionsBySurveySystem($surveySystemId) {
+    global $db;
+    return $db->fetchAll("SELECT * FROM questions WHERE survey_system_id = ? ORDER BY question_order ASC", [$surveySystemId]);
+}
+
+// دوال إدارة خيارات الأسئلة
+function createQuestionOption($questionId, $optionText) {
+    global $db;
+    return $db->insert('question_options', [
+        'question_id' => $questionId,
+        'option_text' => $optionText
+    ]);
+}
+
+function updateQuestionOption($id, $optionText) {
+    global $db;
+    return $db->update('question_options', ['option_text' => $optionText], 'id = ?', [$id]);
+}
+
+function deleteQuestionOption($id) {
+    global $db;
+    return $db->delete('question_options', 'id = ?', [$id]);
+}
+
+function getQuestionOptions($questionId) {
+    global $db;
+    return $db->fetchAll("SELECT * FROM question_options WHERE question_id = ? ORDER BY id ASC", [$questionId]);
+}
+
+// دوال إدارة الردود
+function createSurveyResponse($surveySystemId, $data) {
+    global $db;
+    $data['survey_system_id'] = $surveySystemId;
+    return $db->insert('survey_responses', $data);
+}
+
+function getSurveyResponse($id) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM survey_responses WHERE id = ?", [$id]);
+}
+
+function getSurveyResponsesBySurveySystem($surveySystemId, $limit = null, $offset = null) {
+    global $db;
+    $sql = "SELECT sr.*, p.program_name 
+            FROM survey_responses sr 
+            LEFT JOIN programs p ON sr.program_id = p.id 
+            WHERE sr.survey_system_id = ? 
+            ORDER BY sr.submission_date DESC";
+    
+    if ($limit !== null) {
+        $sql .= " LIMIT " . intval($limit);
+        if ($offset !== null) {
+            $sql .= " OFFSET " . intval($offset);
+        }
+    }
+    
+    return $db->fetchAll($sql, [$surveySystemId]);
+}
+
+function countSurveyResponsesBySurveySystem($surveySystemId) {
+    global $db;
+    $result = $db->fetchOne("SELECT COUNT(*) as count FROM survey_responses WHERE survey_system_id = ?", [$surveySystemId]);
+    return $result['count'];
+}
+
+// دوال إدارة إجابات الأسئلة
+function createSurveyAnswer($responseId, $questionId, $answerText = null, $rating = null) {
+    global $db;
+    return $db->insert('survey_answers', [
+        'response_id' => $responseId,
+        'question_id' => $questionId,
+        'answer_text' => $answerText,
+        'rating' => $rating
+    ]);
+}
+
+function getSurveyAnswersByResponse($responseId) {
+    global $db;
+    return $db->fetchAll("
+        SELECT sa.*, q.question_text, q.question_type 
+        FROM survey_answers sa 
+        JOIN questions q ON sa.question_id = q.id 
+        WHERE sa.response_id = ? 
+        ORDER BY q.question_order ASC
+    ", [$responseId]);
+}
+
+// دوال الإحصائيات
+function getSurveySystemStats($surveySystemId) {
+    global $db;
+    
+    $stats = [];
+    
+    // عدد الردود الكلي
+    $totalResponses = $db->fetchOne("SELECT COUNT(*) as count FROM survey_responses WHERE survey_system_id = ?", [$surveySystemId]);
+    $stats['total_responses'] = $totalResponses['count'];
+    
+    // عدد الردود اليوم
+    $todayResponses = $db->fetchOne("SELECT COUNT(*) as count FROM survey_responses WHERE survey_system_id = ? AND DATE(submission_date) = CURDATE()", [$surveySystemId]);
+    $stats['today_responses'] = $todayResponses['count'];
+    
+    // عدد الردود هذا الشهر
+    $monthResponses = $db->fetchOne("SELECT COUNT(*) as count FROM survey_responses WHERE survey_system_id = ? AND MONTH(submission_date) = MONTH(CURDATE()) AND YEAR(submission_date) = YEAR(CURDATE())", [$surveySystemId]);
+    $stats['month_responses'] = $monthResponses['count'];
+    
+    // توزيع الردود حسب الجنس
+    $genderStats = $db->fetchAll("SELECT gender, COUNT(*) as count FROM survey_responses WHERE survey_system_id = ? AND gender IS NOT NULL GROUP BY gender", [$surveySystemId]);
+    $stats['gender_distribution'] = $genderStats;
+    
+    // توزيع الردود حسب البرنامج
+    $programStats = $db->fetchAll("
+        SELECT p.program_name, COUNT(sr.id) as count 
+        FROM programs p 
+        LEFT JOIN survey_responses sr ON p.id = sr.program_id AND sr.survey_system_id = ?
+        WHERE p.survey_system_id = ?
+        GROUP BY p.id, p.program_name 
+        ORDER BY count DESC
+    ", [$surveySystemId, $surveySystemId]);
+    $stats['program_distribution'] = $programStats;
+    
+    // متوسط التقييمات
+    $ratingStats = $db->fetchAll("
+        SELECT q.question_text, AVG(sa.rating) as avg_rating, COUNT(sa.rating) as rating_count
+        FROM questions q 
+        LEFT JOIN survey_answers sa ON q.id = sa.question_id 
+        LEFT JOIN survey_responses sr ON sa.response_id = sr.id 
+        WHERE q.survey_system_id = ? AND q.question_type = 'rating' AND sr.survey_system_id = ?
+        GROUP BY q.id, q.question_text 
+        ORDER BY q.question_order ASC
+    ", [$surveySystemId, $surveySystemId]);
+    $stats['rating_averages'] = $ratingStats;
+    
+    return $stats;
+}
+
+// دوال المساعدة
+function generateSlug($text) {
+    // تحويل النص العربي إلى slug
+    $text = trim($text);
+    $text = preg_replace('/[^\p{Arabic}\p{L}\p{N}\s-]/u', '', $text);
+    $text = preg_replace('/[\s-]+/', '-', $text);
+    $text = trim($text, '-');
+    
+    // إذا كان النص فارغاً بعد التنظيف، استخدم timestamp
+    if (empty($text)) {
+        $text = 'survey-' . time();
+    }
+    
+    return strtolower($text);
+}
+
+function uploadFile($file, $allowedTypes = ['jpg', 'jpeg', 'png', 'gif']) {
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        throw new Exception("لم يتم رفع الملف بشكل صحيح");
+    }
+    
+    if ($file['size'] > MAX_FILE_SIZE) {
+        throw new Exception("حجم الملف كبير جداً");
+    }
+    
+    $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($fileExtension, $allowedTypes)) {
+        throw new Exception("نوع الملف غير مسموح");
+    }
+    
+    $fileName = uniqid() . '.' . $fileExtension;
+    $uploadPath = UPLOAD_PATH . $fileName;
+    
+    if (!is_dir(UPLOAD_PATH)) {
+        mkdir(UPLOAD_PATH, 0755, true);
+    }
+    
+    if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        throw new Exception("فشل في رفع الملف");
+    }
+    
+    return $uploadPath;
+}
+
+function deleteFile($filePath) {
+    if (file_exists($filePath)) {
+        return unlink($filePath);
+    }
+    return true;
+}
+
+// دوال الأمان
+function hashPassword($password) {
+    return password_hash($password, PASSWORD_DEFAULT);
+}
+
+function verifyPassword($password, $hash) {
+    return password_verify($password, $hash);
+}
+
+function isLoggedIn() {
+    return isset($_SESSION['admin_id']) && !empty($_SESSION['admin_id']);
+}
+
+function requireLogin() {
+    if (!isLoggedIn()) {
+        header('Location: login.php');
         exit;
     }
 }
 
-// --- Question Management Functions ---
-function get_all_questions($conn) {
-    $sql = "SELECT * FROM questions ORDER BY question_order ASC";
-    $result = $conn->query($sql);
-    $questions = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $questions[] = $row;
+function logout() {
+    session_destroy();
+    header('Location: login.php');
+    exit;
+}
+
+// دوال إدارة المديرين
+function createAdmin($data) {
+    global $db;
+    
+    // التحقق من عدم تكرار اسم المستخدم
+    $existingAdmin = $db->fetchOne("SELECT id FROM admin_users WHERE username = ?", [$data['username']]);
+    if ($existingAdmin) {
+        throw new Exception("اسم المستخدم مستخدم مسبقاً");
+    }
+    
+    // تشفير كلمة المرور
+    $data['password'] = hashPassword($data['password']);
+    
+    return $db->insert('admin_users', $data);
+}
+
+function updateAdmin($id, $data) {
+    global $db;
+    
+    // التحقق من عدم تكرار اسم المستخدم (باستثناء المدير الحالي)
+    if (isset($data['username'])) {
+        $existingAdmin = $db->fetchOne("SELECT id FROM admin_users WHERE username = ? AND id != ?", [$data['username'], $id]);
+        if ($existingAdmin) {
+            throw new Exception("اسم المستخدم مستخدم مسبقاً");
         }
     }
-    return $questions;
-}
-
-function get_question_by_id($conn, $id) {
-    $sql = "SELECT * FROM questions WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return $result->fetch_assoc();
-}
-
-function get_question_options($conn, $question_id) {
-    $sql = "SELECT * FROM question_options WHERE question_id = ? ORDER BY id ASC";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $question_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $options = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $options[] = $row;
-        }
+    
+    // تشفير كلمة المرور إذا تم تحديثها
+    if (isset($data['password']) && !empty($data['password'])) {
+        $data['password'] = hashPassword($data['password']);
+    } else {
+        unset($data['password']);
     }
-    return $options;
+    
+    return $db->update('admin_users', $data, 'id = ?', [$id]);
 }
 
-function get_question_id_by_text($conn, $question_text) {
-    $sql = "SELECT id FROM questions WHERE question_text = ? LIMIT 1";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $question_text);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        return $row["id"];
-    }
-    return null;
+function deleteAdmin($id) {
+    global $db;
+    return $db->delete('admin_users', 'id = ?', [$id]);
 }
 
-function add_question($conn, $question_text, $question_type, $is_required, $options = []) {
-    // Get the next question order
-    $sql_order = "SELECT MAX(question_order) AS max_order FROM questions";
-    $result_order = $conn->query($sql_order);
-    $row_order = $result_order->fetch_assoc();
-    $next_order = ($row_order["max_order"] !== null) ? $row_order["max_order"] + 1 : 1;
-    $sql = "INSERT INTO questions (question_text, question_type, is_required, question_order) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssii", $question_text, $question_type, $is_required, $next_order);
-    if ($stmt->execute()) {
-        $question_id = $stmt->insert_id;
-        if (!empty($options) && ($question_type == 'single_choice' || $question_type == 'multiple_choice' || $question_type == 'dropdown')) {
-            foreach ($options as $option_text) {
-                if(!empty(trim($option_text))) {
-                   add_question_option($conn, $question_id, $option_text);
-                }
-            }
-        }
-        return true;
+function getAdmin($id) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM admin_users WHERE id = ?", [$id]);
+}
+
+function getAdminByUsername($username) {
+    global $db;
+    return $db->fetchOne("SELECT * FROM admin_users WHERE username = ?", [$username]);
+}
+
+function getAllAdmins() {
+    global $db;
+    return $db->fetchAll("SELECT id, username, email, full_name, is_super_admin, created_date, last_login FROM admin_users ORDER BY created_date DESC");
+}
+
+function authenticateAdmin($username, $password) {
+    $admin = getAdminByUsername($username);
+    
+    if ($admin && verifyPassword($password, $admin['password'])) {
+        // تحديث وقت آخر تسجيل دخول
+        global $db;
+        $db->update('admin_users', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$admin['id']]);
+        
+        // حفظ بيانات الجلسة
+        $_SESSION['admin_id'] = $admin['id'];
+        $_SESSION['admin_username'] = $admin['username'];
+        $_SESSION['admin_name'] = $admin['full_name'];
+        $_SESSION['is_super_admin'] = $admin['is_super_admin'];
+        
+        return $admin;
     }
+    
     return false;
 }
 
-function update_question($conn, $id, $question_text, $question_type, $is_required) {
-    $sql = "UPDATE questions SET question_text = ?, question_type = ?, is_required = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssii", $question_text, $question_type, $is_required, $id);
-    return $stmt->execute();
-}
-
-function delete_question($conn, $id) {
-    $sql = "DELETE FROM questions WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    return $stmt->execute();
-}
-
-function add_question_option($conn, $question_id, $option_text) {
-    $sql = "INSERT INTO question_options (question_id, option_text) VALUES (?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("is", $question_id, $option_text);
-    return $stmt->execute();
-}
-
-function delete_question_option($conn, $option_id) {
-    $sql = "DELETE FROM question_options WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $option_id);
-    return $stmt->execute();
-}
-
-// --- Program Functions ---
-function get_all_programs($conn) {
-    $sql = "SELECT * FROM programs ORDER BY program_order ASC";
-    $result = $conn->query($sql);
-    $programs = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $programs[] = $row;
-        }
-    }
-    return $programs;
-}
-
-function add_program($conn, $program_name) {
-    $sql_order = "SELECT MAX(program_order) as max_order FROM programs";
-    $result_order = $conn->query($sql_order);
-    $next_order = $result_order->fetch_assoc()['max_order'] + 1;
-    $sql = "INSERT INTO programs (program_name, program_order) VALUES (?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $program_name, $next_order);
-    return $stmt->execute();
-}
-
-function update_program($conn, $id, $program_name) {
-    $sql = "UPDATE programs SET program_name = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $program_name, $id);
-    return $stmt->execute();
-}
-
-function delete_program($conn, $id) {
-    $sql = "DELETE FROM programs WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    return $stmt->execute();
-}
-
-function update_programs_order($conn, $program_ids_array) {
-    $order = 1;
-    $sql = "UPDATE programs SET program_order = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    if(!$stmt) return false;
-    foreach ($program_ids_array as $id) {
-        $stmt->bind_param('ii', $order, $id);
-        $stmt->execute();
-        $order++;
-    }
-    $stmt->close();
-    return true;
-}
-
-// --- Survey Response Functions ---
-function save_survey_response($conn, $data) {
-    $conn->begin_transaction();
-    try {
-        $sql_response = "INSERT INTO survey_responses (beneficiary_name, phone_number, gender, program_id, suggestions) VALUES (?, ?, ?, ?, ?)";
-        $stmt_response = $conn->prepare($sql_response);
-        $stmt_response->bind_param("sssis", $data["beneficiary_name"], $data["phone_number"], $data["gender"], $data["program_id"], $data["suggestions"]);
-        $stmt_response->execute();
-        $response_id = $stmt_response->insert_id;
-
-        foreach ($data["answers"] as $question_id => $answer) {
-            $question_info = get_question_by_id($conn, $question_id);
-            if (!$question_info) continue;
-            $answer_text = null; $rating = null; $multiple_choice_options = [];
-            if ($question_info["question_type"] == "rating") { $rating = intval($answer); // Ensure rating is an integer
-            } elseif (in_array($question_info["question_type"], ["text", "single_choice", "dropdown"])) { $answer_text = strval($answer); // Ensure answer is a string
-            } elseif ($question_info["question_type"] == "multiple_choice" && is_array($answer)) { $multiple_choice_options = $answer; }
-            $sql_answer = "INSERT INTO survey_answers (response_id, question_id, answer_text, rating) VALUES (?, ?, ?, ?)";
-            $stmt_answer = $conn->prepare($sql_answer);
-            $stmt_answer->bind_param("iisi", $response_id, $question_id, $answer_text, $rating);
-            $stmt_answer->execute();
-            $survey_answer_id = $stmt_answer->insert_id;
-
-            if ($question_info["question_type"] == "multiple_choice" && !empty($multiple_choice_options)) {
-                // For multiple choice, we store the answer text comma-separated in the main answer field
-                // And link options in the pivot table
-                $answer_text = implode(', ', $multiple_choice_options);
-                $update_answer_text_sql = "UPDATE survey_answers SET answer_text = ? WHERE id = ?";
-                $update_stmt = $conn->prepare($update_answer_text_sql);
-                $update_stmt->bind_param('si', $answer_text, $survey_answer_id);
-                $update_stmt->execute();
-                
-                foreach ($multiple_choice_options as $option_text) {
-                    // Find option id by text
-                    $find_option_sql = "SELECT id FROM question_options WHERE question_id = ? AND option_text = ?";
-                    $find_stmt = $conn->prepare($find_option_sql);
-                    $find_stmt->bind_param('is', $question_id, $option_text);
-                    $find_stmt->execute();
-                    $option_result = $find_stmt->get_result();
-                    if($option_row = $option_result->fetch_assoc()) {
-                        $option_id = $option_row['id'];
-                        $sql_mc = "INSERT INTO survey_multiple_choice_answers (survey_answer_id, option_id) VALUES (?, ?)";
-                        $stmt_mc = $conn->prepare($sql_mc);
-                        $stmt_mc->bind_param("ii", $survey_answer_id, $option_id);
-                        $stmt_mc->execute();
-                    }
-                }
-            }
-        }
-        $conn->commit();
-        return true;
-    } catch (mysqli_sql_exception $exception) {
-        $conn->rollback();
-        error_log("Error saving survey response: " . $exception->getMessage());
-        return false;
-    }
-}
-
-
-function get_all_survey_responses($conn) {
-    $sql = "SELECT sr.id, sr.beneficiary_name, sr.phone_number, sr.gender, p.program_name, sr.submission_date, sr.suggestions ";
-    $sql .= "FROM survey_responses sr LEFT JOIN programs p ON sr.program_id = p.id ORDER BY sr.submission_date DESC";
-    $result = $conn->query($sql);
-    $responses = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $responses[] = $row;
-        }
-    }
-    return $responses;
-}
-
-function get_survey_response_details($conn, $response_id) {
-    $sql = "SELECT sr.id, sr.beneficiary_name, sr.phone_number, sr.gender, p.program_name, sr.submission_date, sr.suggestions ";
-    $sql .= "FROM survey_responses sr LEFT JOIN programs p ON sr.program_id = p.id WHERE sr.id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $response_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $response_details = $result->fetch_assoc();
-
-    if ($response_details) {
-        $sql_answers = "SELECT q.question_text, q.question_type, sa.answer_text, sa.rating, sa.id as answer_id ";
-        $sql_answers .= "FROM survey_answers sa JOIN questions q ON sa.question_id = q.id WHERE sa.response_id = ?";
-        $stmt_answers = $conn->prepare($sql_answers);
-        $stmt_answers->bind_param("i", $response_id);
-        $stmt_answers->execute();
-        $result_answers = $stmt_answers->get_result();
-        $answers = [];
-        while ($row_answer = $result_answers->fetch_assoc()) {
-            if ($row_answer["question_type"] == "multiple_choice") {
-                // The answer_text is already stored comma-separated, so we can use it directly.
-                // This simplifies the logic and makes it more reliable.
-            }
-            $answers[] = $row_answer;
-        }
-        $response_details["answers"] = $answers;
-    }
-    return $response_details;
-}
-
-
-function delete_survey_response($conn, $response_id) {
-    $conn->begin_transaction();
-    try {
-        $sql_mc = "DELETE smca FROM survey_multiple_choice_answers smca JOIN survey_answers sa ON smca.survey_answer_id = sa.id WHERE sa.response_id = ?";
-        $stmt_mc = $conn->prepare($sql_mc);
-        $stmt_mc->bind_param("i", $response_id);
-        $stmt_mc->execute();
-        $sql_answers = "DELETE FROM survey_answers WHERE response_id = ?";
-        $stmt_answers = $conn->prepare($sql_answers);
-        $stmt_answers->bind_param("i", $response_id);
-        $stmt_answers->execute();
-        $sql_response = "DELETE FROM survey_responses WHERE id = ?";
-        $stmt_response = $conn->prepare($sql_response);
-        $stmt_response->bind_param("i", $response_id);
-        $stmt_response->execute();
-        $conn->commit();
-        return true;
-    } catch (mysqli_sql_exception $exception) {
-        $conn->rollback();
-        error_log("Error deleting survey response: " . $exception->getMessage());
-        return false;
-    }
-}
-
-// --- Settings Functions ---
-function update_settings($conn, $data) {
-    $sql = "UPDATE settings SET site_name = ?, system_name = ?, logo_path = ?, primary_font_url = ?, primary_font_name = ?, primary_color = ?, secondary_color = ? WHERE id = 1";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssss", $data['site_name'], $data['system_name'], $data['logo_path'], $data['primary_font_url'], $data['primary_font_name'], $data['primary_color'], $data['secondary_color']);
-    return $stmt->execute();
-}
-function get_latest_settings($conn) {
-    $sql = "SELECT * FROM settings ORDER BY id DESC LIMIT 1";
-    $result = $conn->query($sql);
-    if ($result && $result->num_rows > 0) { return $result->fetch_assoc(); }
-    // Default fallback settings
-    return [
-        "site_name" => "نظام الاستبيانات", 
-        "system_name" => "لوحة التحكم", 
-        "logo_path" => "", 
-        "primary_font_url" => "https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap", 
-        "primary_font_name" => "Tajawal", 
-        "primary_color" => "#1a535c", 
-        "secondary_color" => "#f7b538"
+// دوال إدارة صلاحيات الأنظمة
+function grantSystemAccess($adminId, $surveySystemId, $permissions = []) {
+    global $db;
+    
+    $data = [
+        'admin_id' => $adminId,
+        'survey_system_id' => $surveySystemId,
+        'can_view' => isset($permissions['can_view']) ? $permissions['can_view'] : 1,
+        'can_edit' => isset($permissions['can_edit']) ? $permissions['can_edit'] : 0,
+        'can_delete' => isset($permissions['can_delete']) ? $permissions['can_delete'] : 0
     ];
-}
-
-// --- Helper Functions ---
-function sanitize_input($data) { return htmlspecialchars(stripslashes(trim($data))); }
-function redirect($url) { header("Location: " . $url); exit(); }
-
-// ======================= يبدأ التعديل هنا =======================
-/**
- * Adjusts the brightness of a HEX color.
- * @param string $hex The hex color code (e.g., #RRGGBB).
- * @param int $steps A value between -255 and 255. Negative to darken, positive to lighten.
- * @return string The new hex color code.
- */
-function adjust_brightness($hex, $steps) {
-    // Steps should be between -255 and 255. E.g., -20 means darker, 20 means lighter.
-    $steps = max(-255, min(255, $steps));
-    // Normalize HEX color code
-    $hex = str_replace('#', '', $hex);
-    if (strlen($hex) == 3) {
-        $hex = str_repeat(substr($hex,0,1), 2).str_repeat(substr($hex,1,1), 2).str_repeat(substr($hex,2,1), 2);
-    }
-    // Convert to RGB
-    $r = hexdec(substr($hex,0,2));
-    $g = hexdec(substr($hex,2,2));
-    $b = hexdec(substr($hex,4,2));
-    // Adjust brightness
-    $r = max(0,min(255,$r + $steps));
-    $g = max(0,min(255,$g + $steps));
-    $b = max(0,min(255,$b + $steps));
-    // Convert back to HEX
-    return '#'.str_pad(dechex($r), 2, '0', STR_PAD_LEFT)
-              .str_pad(dechex($g), 2, '0', STR_PAD_LEFT)
-              .str_pad(dechex($b), 2, '0', STR_PAD_LEFT);
-}
-// ======================= ينتهي التعديل هنا =======================
-
-
-// --- HTML Rendering Functions ---
-function get_admin_header($settings) {
-    $logo_html = "";
-    if (!empty($settings["logo_path"])) {
-        $logo_path = "../" . htmlspecialchars($settings["logo_path"]);
-        $logo_html = "<img src=\"{$logo_path}\" alt=\"" . htmlspecialchars($settings["site_name"]) . " Logo\" style=\"max-height: 50px; margin-bottom: 10px;\">";
+    
+    // التحقق من وجود صلاحية مسبقة
+    $existingAccess = $db->fetchOne("SELECT id FROM admin_system_access WHERE admin_id = ? AND survey_system_id = ?", [$adminId, $surveySystemId]);
+    
+    if ($existingAccess) {
+        return $db->update('admin_system_access', $data, 'admin_id = ? AND survey_system_id = ?', [$adminId, $surveySystemId]);
     } else {
-        $logo_html = "<h3 class=\"site-name2\">" . htmlspecialchars($settings["site_name"]) . "</h3>";
+        return $db->insert('admin_system_access', $data);
+    }
+}
+
+function revokeSystemAccess($adminId, $surveySystemId) {
+    global $db;
+    return $db->delete('admin_system_access', 'admin_id = ? AND survey_system_id = ?', [$adminId, $surveySystemId]);
+}
+
+function getAdminSystemAccess($adminId) {
+    global $db;
+    return $db->fetchAll("
+        SELECT asa.*, ss.system_name, ss.system_slug 
+        FROM admin_system_access asa 
+        JOIN survey_systems ss ON asa.survey_system_id = ss.id 
+        WHERE asa.admin_id = ?
+    ", [$adminId]);
+}
+
+function hasSystemAccess($adminId, $surveySystemId, $permission = 'can_view') {
+    global $db;
+    
+    // المدير العام له صلاحية على جميع الأنظمة
+    $admin = getAdmin($adminId);
+    if ($admin && $admin['is_super_admin']) {
+        return true;
     }
     
-    $current_page = basename($_SERVER['PHP_SELF']);
-    $menu_items = [
-        'dashboard.php' => ['icon' => 'fa-tachometer-alt', 'text' => 'لوحة التحكم'],
-        'questions.php' => ['icon' => 'fa-question-circle', 'text' => 'إدارة الأسئلة'],
-        'programs.php' => ['icon' => 'fa-list-alt', 'text' => 'إدارة البرامج'],
-        'survey_results.php' => ['icon' => 'fa-poll-h', 'text' => 'نتائج الاستبيانات'],
-        'settings.php' => ['icon' => 'fa-cogs', 'text' => 'الإعدادات'],
-    ];
-
-    $menu_html = "<ul>";
-    foreach ($menu_items as $url => $item) {
-        $active_class = ($current_page == $url) ? 'active' : '';
-        $menu_html .= "<li><a href=\"{$url}\" class=\"{$active_class}\"><i class=\"fas {$item['icon']}\"></i> <span>{$item['text']}</span></a></li>";
-    }
-    $menu_html .= "<li><a href=\"logout.php\" class=\"logout-btn\"><i class=\"fas fa-sign-out-alt\"></i> <span>تسجيل الخروج</span></a></li>";
-    $menu_html .= "</ul>";
-
-    return "<div class=\"sidebar-header\">{$logo_html}<h4 class=\"system-title\">" . htmlspecialchars($settings["system_name"]) . "</h4></div><div class=\"sidebar-separator\"></div>{$menu_html}";
-}
-
-function get_admin_head($settings, $page_title = "لوحة التحكم") {
-    $font_name = $settings['primary_font_name'] ?? 'Tajawal';
-    $font_url = $settings['primary_font_url'] ?? '';
+    $access = $db->fetchOne("SELECT {$permission} FROM admin_system_access WHERE admin_id = ? AND survey_system_id = ?", [$adminId, $surveySystemId]);
     
-    $head = "<head>
-        <meta charset=\"UTF-8\">
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-        <title>" . htmlspecialchars($page_title) . " - " . htmlspecialchars($settings["system_name"]) . "</title>
-        <link rel=\"stylesheet\" href=\"../css/style.css\">
-        <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">";
+    return $access && $access[$permission];
+}
 
-    if (!empty($font_url)) {
-        $head .= "<link href=\"" . htmlspecialchars($font_url) . "\" rel=\"stylesheet\">";
+// دوال الإعدادات
+function getSetting($key, $default = null) {
+    global $db;
+    $setting = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = ?", [$key]);
+    return $setting ? $setting['setting_value'] : $default;
+}
+
+function setSetting($key, $value, $description = null) {
+    global $db;
+    
+    $existingSetting = $db->fetchOne("SELECT id FROM settings WHERE setting_key = ?", [$key]);
+    
+    if ($existingSetting) {
+        $data = ['setting_value' => $value];
+        if ($description !== null) {
+            $data['description'] = $description;
+        }
+        return $db->update('settings', $data, 'setting_key = ?', [$key]);
+    } else {
+        return $db->insert('settings', [
+            'setting_key' => $key,
+            'setting_value' => $value,
+            'description' => $description
+        ]);
     }
-
-    $head .= "<style>
-            body { font-family: '" . htmlspecialchars($font_name) . "', sans-serif; }
-            :root {
-                --primary-color: " . htmlspecialchars($settings["primary_color"] ?? '#1a535c') . ";
-                --secondary-color: " . htmlspecialchars($settings["secondary_color"] ?? '#f7b538') . ";
-            }
-        </style>
-    </head>";
-    return $head;
 }
 
-function get_survey_head($settings) {
-    $font_name = $settings['primary_font_name'] ?? 'Tajawal';
-    $font_url = $settings['primary_font_url'] ?? '';
-
-    $head = "<head>
-        <meta charset=\"UTF-8\">
-        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-        <title>استبيان رضا المستفيدين - " . htmlspecialchars($settings["site_name"]) . "</title>
-        <link rel=\"stylesheet\" href=\"css/index_style.css\">
-        <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">";
-
-    if (!empty($font_url)) {
-        $head .= "<link href=\"" . htmlspecialchars($font_url) . "\" rel=\"stylesheet\">";
-    }
-
-    $head .= "<style>
-            body { font-family: '" . htmlspecialchars($font_name) . "', sans-serif; }
-            /* We don't define :root here anymore, as it will be defined in the survey page itself */
-        </style>
-    </head>";
-    return $head;
-}
-
-function get_admin_footer() { 
-    return "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script><script src=\"https://cdn.jsdelivr.net/npm/sweetalert2@11\"></script><script>document.addEventListener(\"DOMContentLoaded\",function(){const e=document.querySelector(\".menu-toggle\"),t=document.querySelector(\".sidebar\");e&&t&&e.addEventListener(\"click\",function(){t.classList.toggle(\"active\")})});</script>";
-}
-
-function get_survey_footer() { 
-    return ""; 
+function getAllSettings() {
+    global $db;
+    return $db->fetchAll("SELECT * FROM settings ORDER BY setting_key ASC");
 }
 ?>
+

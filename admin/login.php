@@ -1,43 +1,23 @@
 <?php
-session_start();
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../functions.php'; // نحتاجها لدالة get_latest_settings
-require_once __DIR__ . '/../db.php';       // نحتاجها لمتغير $conn
+require_once '../error_reporting.php';
+require_once '../config.php';
+require_once '../functions.php';
 
-// إذا كان المستخدم مسجل دخوله، يتم توجيهه للوحة التحكم
-if (isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true) {
-    header("Location: dashboard.php");
-    exit;
-}
+$error = '';
 
-// جلب الإعدادات لجلب الشعار والعناوين
-$settings = get_latest_settings($conn);
-
-$username = $password = "";
-$username_err = $password_err = $login_err = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    if (empty(trim($_POST["username"]))) {
-        $username_err = "الرجاء إدخال اسم المستخدم.";
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
+    
+    if (empty($username) || empty($password)) {
+        $error = 'يرجى إدخال اسم المستخدم وكلمة المرور';
     } else {
-        $username = trim($_POST["username"]);
-    }
-
-    if (empty(trim($_POST["password"]))) {
-        $password_err = "الرجاء إدخال كلمة المرور.";
-    } else {
-        $password = trim($_POST["password"]);
-    }
-
-    if (empty($username_err) && empty($password_err)) {
-        if (defined('ADMIN_USERNAME') && defined('ADMIN_PASSWORD') && $username == ADMIN_USERNAME && $password == ADMIN_PASSWORD) {
-            $_SESSION["loggedin"] = true;
-            $_SESSION["username"] = $username;
-            header("Location: dashboard.php");
-            exit();
+        $admin = authenticateAdmin($username, $password);
+        if ($admin) {
+            header('Location: dashboard.php');
+            exit;
         } else {
-            $login_err = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+            $error = 'اسم المستخدم أو كلمة المرور غير صحيحة';
         }
     }
 }
@@ -47,179 +27,138 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - <?php echo htmlspecialchars($settings['site_name'] ?? 'لوحة التحكم'); ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-    
+    <title>تسجيل الدخول - <?php echo SITE_TITLE; ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* CSS مخصص ومطابق للصورة */
-        :root {
-            --primary-color: #1a535c; /* اللون الأساسي (الأخضر الداكن) */
-            --light-bg: #f4f6f9;      /* لون الخلفية العام */
-            --input-bg: #eef5fc;      /* لون خلفية حقول الإدخال الأزرق الفاتح */
-            --input-border: #dce8f4;  /* لون حدود حقول الإدخال */
-            --white-color: #ffffff;
-            --text-color: #333;
-            --danger-color: #e74c3c;
-        }
-
-        *, *::before, *::after {
-            box-sizing: border-box;
+        * {
             margin: 0;
             padding: 0;
-        }
-
-        body {
-            font-family: 'Tajawal', sans-serif;
-            background-color: var(--light-bg);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .login-wrapper {
-            width: 100%;
-            max-width: 480px;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: var(--white-color);
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            border-top: 5px solid var(--primary-color);
-            text-align: center;
-        }
-
-        .login-header {
-            margin-bottom: 30px;
-        }
-
-        .login-logo {
-            max-width: 180px; /* أو الحجم المناسب لشعارك */
-            height: auto;
-            margin-bottom: 15px;
-        }
-
-        .login-subtitle {
-            font-size: 1.3rem;
-            font-weight: 500;
-            color: var(--text-color);
-            margin-bottom: 5px;
-        }
-
-        .login-title {
-            font-size: 1.9rem;
-            font-weight: 600;
-            color: var(--primary-color);
+            box-sizing: border-box;
         }
         
-        .login-title2 {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: var(--primary-color);
+        body {
+            font-family: 'Almarai', sans-serif;
+            background: linear-gradient(135deg, #1a535c 0%, #4ecdc4 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #1a535c;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 14px;
         }
         
         .form-group {
-            margin-bottom: 25px;
-            text-align: right;
+            margin-bottom: 20px;
         }
-
+        
         .form-group label {
             display: block;
             margin-bottom: 8px;
+            color: #333;
             font-weight: 500;
-            font-size: 1rem;
-            color: #555;
         }
-
-        .form-control {
-            display: block;
+        
+        .form-group input {
             width: 100%;
-            height: 55px;
-            padding: 10px 16px;
-            font-size: 1.1rem;
-            font-family: 'Tajawal', sans-serif;
-            border: 1px solid var(--input-border);
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
             border-radius: 8px;
-            background-color: var(--input-bg);
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 16px;
+            transition: border-color 0.3s;
         }
         
-        .form-control:focus {
-            border-color: var(--primary-color);
-            outline: 0;
-            box-shadow: 0 0 0 4px rgba(26, 83, 92, 0.1);
-        }
-
-        .is-invalid {
-            border-color: var(--danger-color) !important;
+        .form-group input:focus {
+            outline: none;
+            border-color: #1a535c;
         }
         
-        .invalid-feedback {
-            display: block; color: var(--danger-color); font-size: 0.875rem; margin-top: 5px;
-        }
-
-        .alert-danger {
-            padding: 15px; margin-bottom: 20px; border: 1px solid #f5c6cb;
-            border-radius: 6px; color: #721c24; background-color: #f8d7da; text-align: center;
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
         }
         
-        .btn-primary {
+        .login-btn {
             width: 100%;
-            padding: 15px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--white-color);
-            background-color: var(--primary-color);
+            background: #1a535c;
+            color: white;
+            padding: 12px;
             border: none;
             border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: background-color 0.3s;
         }
         
-        .btn-primary:hover { opacity: 0.9; }
+        .login-btn:hover {
+            background: #2a6570;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <div class="login-wrapper">
-        <div class="login-card">
-
-            <div class="login-header">
-                <?php if (!empty($settings['logo_path'])): ?>
-                    <img src="../<?php echo htmlspecialchars($settings['logo_path']); ?>" alt="شعار الجهة" class="login-logo">
-                <?php endif; ?>
-
-                     <h2 class="login-title2"><?php echo htmlspecialchars($settings["system_name"]); ?></h2>
-     <h2 class="login-title2">لوحة التحكم</h2>
-                <h2 class="login-title">تسجيل الدخول</h2>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>تسجيل الدخول</h1>
+            <p>لوحة تحكم نظام قياس رضا المستفيدين</p>
+        </div>
+        
+        <?php if ($error): ?>
+            <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">اسم المستخدم</label>
+                <input type="text" id="username" name="username" required>
             </div>
-
-            <?php 
-            if(!empty($login_err)){
-                echo '<div class="alert alert-danger">' . htmlspecialchars($login_err) . '</div>';
-            }
-            ?>
-
-            <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
-                <div class="form-group">
-                    <label for="username">اسم المستخدم</label>
-                    <input id="username" type="text" name="username" class="form-control <?php echo (!empty($username_err)) ? 'is-invalid' : ''; ?>" value="<?php echo htmlspecialchars($username); ?>" required>
-                    <span class="invalid-feedback"><?php echo $username_err; ?></span>
-                </div>    
-                <div class="form-group">
-                    <label for="password">كلمة المرور</label>
-                    <input id="password" type="password" name="password" class="form-control <?php echo (!empty($password_err)) ? 'is-invalid' : ''; ?>" required>
-                    <span class="invalid-feedback"><?php echo $password_err; ?></span>
-                </div>
-                <div class="form-group" style="margin-top: 30px;">
-                    <input type="submit" class="btn btn-primary" value="دخول">
-                </div>
-            </form>
+            
+            <div class="form-group">
+                <label for="password">كلمة المرور</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="login-btn">تسجيل الدخول</button>
+        </form>
+        
+        <div class="footer">
+            <p>&copy; <?php echo date('Y'); ?> جميع الحقوق محفوظة</p>
         </div>
     </div>
 </body>
 </html>
+

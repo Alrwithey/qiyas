@@ -1,36 +1,94 @@
-
 <?php
 require_once 'config.php';
 
-$conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-$conn->set_charset("utf8mb4");
-
-// Function to get site settings from the database
-function get_settings($conn) {
-    $sql = "SELECT * FROM settings ORDER BY id DESC LIMIT 1";
-    $result = $conn->query($sql);
-    if ($result && $result->num_rows > 0) {
+class Database {
+    private $conn;
+    
+    public function __construct() {
+        $this->conn = new mysqli(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME);
+        
+        if ($this->conn->connect_error) {
+            die("فشل الاتصال بقاعدة البيانات: " . $this->conn->connect_error);
+        }
+        
+        $this->conn->set_charset("utf8mb4");
+    }
+    
+    public function getConnection() {
+        return $this->conn;
+    }
+    
+    public function query($sql, $params = []) {
+        $stmt = $this->conn->prepare($sql);
+        
+        if (!$stmt) {
+            throw new Exception("خطأ في تحضير الاستعلام: " . $this->conn->error);
+        }
+        
+        if (!empty($params)) {
+            $types = str_repeat('s', count($params));
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result === false) {
+            return $stmt->affected_rows;
+        }
+        
+        return $result;
+    }
+    
+    public function fetchAll($sql, $params = []) {
+        $result = $this->query($sql, $params);
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+    
+    public function fetchOne($sql, $params = []) {
+        $result = $this->query($sql, $params);
         return $result->fetch_assoc();
-    } else {
-        // Return default values if no settings are found in the database
-        return [
-            'site_name' => SITE_NAME_DEFAULT,
-            'system_name' => SYSTEM_NAME_DEFAULT,
-            'logo_path' => null,
-            'font_family' => DEFAULT_FONT_FAMILY,
-            'primary_color' => DEFAULT_PRIMARY_COLOR,
-            'secondary_color' => DEFAULT_SECONDARY_COLOR,
-            'enable_pagination' => DEFAULT_ENABLE_PAGINATION,
-            'questions_per_page' => DEFAULT_QUESTIONS_PER_PAGE
-        ];
+    }
+    
+    public function insert($table, $data) {
+        $columns = implode(',', array_keys($data));
+        $placeholders = str_repeat('?,', count($data) - 1) . '?';
+        
+        $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
+        $this->query($sql, array_values($data));
+        
+        return $this->conn->insert_id;
+    }
+    
+    public function update($table, $data, $where, $whereParams = []) {
+        $setParts = [];
+        foreach (array_keys($data) as $column) {
+            $setParts[] = "{$column} = ?";
+        }
+        $setClause = implode(', ', $setParts);
+        
+        $sql = "UPDATE {$table} SET {$setClause} WHERE {$where}";
+        $params = array_merge(array_values($data), $whereParams);
+        
+        return $this->query($sql, $params);
+    }
+    
+    public function delete($table, $where, $whereParams = []) {
+        $sql = "DELETE FROM {$table} WHERE {$where}";
+        return $this->query($sql, $whereParams);
+    }
+    
+    public function escape($string) {
+        return $this->conn->real_escape_string($string);
+    }
+    
+    public function close() {
+        $this->conn->close();
     }
 }
 
-$settings = get_settings($conn);
+// إنشاء مثيل عام لقاعدة البيانات
+$db = new Database();
+$conn = $db->getConnection();
 ?>
 
