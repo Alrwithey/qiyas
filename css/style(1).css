@@ -1,0 +1,845 @@
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap");
+:root { --primary-color: #1a535c; --secondary-color: #f7b538; --danger-color: #e74c3c; --success-color: #27ae60; --info-color: #3498db; --light-bg: #f4f6f9; --white-color: #ffffff; --text-color: #1a535c; --sidebar-width: 250px; }
+body { font-family: 'Tajawal', sans-serif; background-color: var(--light-bg); margin: 0; direction: rtl; color: var(--text-color); }
+.admin-wrapper { display: flex; min-height: 100vh; }
+.sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: var(--white-color); display: flex; flex-direction: column; position: fixed; top: 0; right: 0; bottom: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.15); z-index: 1001; transition: right 0.3s ease-in-out; }
+.sidebar-header { padding: 20px 15px; text-align: center; }
+.system-title { font-size: 1.3rem; font-weight: 500; color: var(--white-color); }
+.site-name { font-size: 1rem; font-weight: 500; color: var(--secondary-color); margin-top: 5px; }
+.site-name2 { font-size: 1.2rem; font-weight: 500; color: #ffffff; margin-top: 1px; }
+.sidebar-separator { height: 1px; background-color: rgba(255,255,255,0.1); margin: 10px 15px; }
+.sidebar ul { list-style: none; padding: 15px 10px; margin: 0; flex-grow: 1; overflow-y: auto; }
+.sidebar ul li a { color: #ecf0f1; text-decoration: none; display: flex; align-items: center; padding: 12px 15px; border-radius: 6px; margin-bottom: 5px; transition: background-color 0.2s, color 0.2s; font-size: 0.95rem; }
+.sidebar ul li a.active, .sidebar ul li a:hover { background-color: var(--secondary-color); color: var(--primary-color); font-weight: 700; }
+.sidebar ul li a i { margin-left: 15px; width: 20px; text-align: center; font-size: 1.1em; }
+.sidebar ul li a span { flex-grow: 1; }
+.logout-btn { color: #f1c40f; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 20px; background-color: rgba(0,0,0,0.2); font-weight: bold; transition: background-color 0.3s; }
+.logout-btn:hover { background-color: var(--danger-color); color: var(--white-color); }
+.main-content { flex-grow: 1; padding: 30px; margin-right: var(--sidebar-width); transition: margin-right 0.3s ease-in-out; }
+.main-content h1 { color: var(--primary-color); border-bottom: 3px solid var(--secondary-color); padding-bottom: 15px; margin-top: 0; margin-bottom: 30px; }
+.search-container { max-width: 600px; margin: 0 auto 25px auto; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; }
+.search-form { display: flex; gap: 10px; align-items: center; }
+.search-input-group { display: flex; flex-grow: 1; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+.search-form input[type="text"] { flex-grow: 1; border: none; padding: 11px; }
+.search-form input[type="text"]:focus { outline: none; box-shadow: inset 0 0 5px rgba(247, 181, 56, 0.4); }
+.search-form select { border: none; background-color: #f1f1f1; border-right: 1px solid #ddd; padding: 0 10px; }
+.search-form button { padding: 11px 20px; border-radius: 6px; background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; }
+.search-form .clear-search { padding: 11px 20px; background-color: #7f8c8d; color: white; border-radius: 6px; text-decoration: none; }
+.menu-toggle { display: none; position: fixed; top: 15px; right: 15px; z-index: 1002; background: var(--primary-color); color: var(--white-color); border: none; font-size: 24px; padding: 10px 15px; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+@media (max-width: 992px) {
+    .sidebar { right: -260px; }
+    .sidebar.active { right: 0; }
+    .main-content { margin-right: 0; padding: 20px 15px; }
+    .menu-toggle { display: block; }
+    .search-container { max-width: 100%; }
+    .search-form { flex-direction: column; align-items: stretch; }
+}
+
+.auth-links {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 0 10px;
+    max-width: 100%;
+}
+
+.auth-links .auth-link {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-links .auth-link:hover {
+    text-decoration: underline;
+}
+/* تنسيقات شبكة الجنسيات */
+.nationalities-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .nationalities-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.nationality-box {
+    background: #f9f9f9;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nationality-box .name {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.nationality-box .actions a {
+    margin-left: 10px;
+    color: #333;
+    text-decoration: none;
+}
+
+.nationality-box .actions a:hover {
+    color: #007bff;
+}
+
+
+        .sidebar ul a.logout-btn {
+            color: #fff !important; /* اللون الافتراضي أبيض */
+            background-color: #1d464d !important; /* بدون خلفية افتراضية */
+        }
+        .sidebar ul a.logout-btn:hover {
+            background-color: #e74c3c !important; /* خلفية حمراء عند التمرير */
+            color: #fff !important;
+        }
+        /* تعديل بسيط لضمان محاذاة النص والأيقونة لليمين */
+        .sidebar ul a {
+            justify-content: flex-start;
+        }
+
+/*
+ * ===============================================
+ *  تنسيقات التجاوب مع الجوال (Mobile Responsiveness)
+ * ===============================================
+*/
+
+/* زر القائمة (Hamburger Menu) */
+.menu-toggle {
+    display: none; /* إخفاء الزر على الشاشات الكبيرة */
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 1001;
+    background: #34495e;
+    color: white;
+    border: none;
+    font-size: 1.2rem;
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* تنسيقات الجداول لتكون قابلة للتمرير الأفقي */
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch; /* لتحسين التمرير على iOS */
+}
+
+/* عندما تكون الشاشة بعرض 992px أو أقل */
+@media (max-width: 992px) {
+    .menu-toggle {
+        display: block; /* إظهار الزر على الجوال */
+    }
+    .sidebar {
+        position: fixed;
+        top: 0;
+        right: -280px; /* إخفاء القائمة خارج الشاشة */
+        height: 100%;
+        z-index: 1000;
+        transition: right 0.3s ease-in-out;
+    }
+    .sidebar.active {
+        right: 0; /* إظهار القائمة عند الضغط */
+    }
+    .main-content {
+        margin-right: 0; /* المحتوى يأخذ العرض الكامل */
+        padding: 70px 15px 15px 15px; /* إضافة حشو علوي لتجنب تداخل زر القائمة */
+    }
+    .admin-wrapper {
+        flex-direction: column;
+    }
+    .dashboard-widgets, .charts-grid, .management-grid {
+        grid-template-columns: 1fr; /* جعل كل العناصر عمودًا واحدًا */
+    }
+    .form-row-flex {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* Survey Page Specific Styles */
+.survey-container {
+    max-width: 800px;
+    margin: 50px auto;
+    background-color: var(--white-color);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.survey-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+.survey-header h1, .survey-header h2 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.survey-header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.survey-logo {
+    max-width: 180px;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+.question-block {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #eee;
+}
+
+.question-block:last-of-type {
+    border-bottom: none;
+}
+
+.question-title {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.required-star {
+    color: var(--danger-color);
+    margin-right: 5px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: 'Tajawal', sans-serif;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+.options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-option, .checkbox-option {
+    display: flex;
+    align-items: center;
+    background-color: #f9f9f9;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.radio-option:hover, .checkbox-option:hover {
+    background-color: #f0f0f0;
+    border-color: var(--secondary-color);
+}
+
+.radio-option input[type="radio"], .checkbox-option input[type="checkbox"] {
+    margin-left: 10px;
+    accent-color: var(--primary-color);
+    transform: scale(1.2);
+}
+
+.radio-option label, .checkbox-option label {
+    cursor: pointer;
+    font-size: 1.05rem;
+    color: #555;
+    flex-grow: 1;
+}
+
+.rating-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.rating-group span {
+    font-weight: 500;
+    color: #777;
+}
+
+.rating-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.rating-radio {
+    display: none;
+}
+
+.rating-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #777;
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.rating-radio:checked + .rating-number {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    transform: scale(1.1);
+}
+
+.submit-block {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #154249;
+    transform: translateY(-2px);
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Admin Panel Specific Styles (from pasted content) */
+.form-container, .table-container {
+    background-color: var(--white-color);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+.table-responsive {
+    overflow-x: auto;
+}
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table th, table td {
+    padding: 15px;
+    text-align: right;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #333;
+}
+.btn-edit, .btn-delete, .btn-action {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    color: white !important;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: opacity 0.3s, transform 0.2s;
+}
+.btn-edit { background-color: var(--info-color); }
+.btn-delete { background-color: var(--danger-color); }
+.btn-edit:hover, .btn-delete:hover, .btn-action:hover { opacity: 0.85; transform: translateY(-1px); }
+.admin-form .form-group {
+    margin-bottom: 20px;
+}
+.admin-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+.admin-form input, .admin-form textarea, .admin-form select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: 'Tajawal', sans-serif;
+    box-sizing: border-box;
+}
+.admin-form button[type="submit"] {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+.dashboard-widgets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+.widget {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    padding: 25px;
+    overflow: hidden;
+}
+.widget-icon {
+    font-size: 2.5rem;
+    color: white;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 20px;
+}
+.widget-content {
+    flex-grow: 1;
+}
+.widget-value {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #333;
+}
+.widget-title {
+    font-size: 1rem;
+    color: #777;
+}
+.success, .error {
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+}
+.success { background-color: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+.error { background-color: #ffebee; color: #c62828; border-color: #ef9a9a; }
+.status-yes, .status-no {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: white;
+}
+.status-yes { background-color: var(--success-color); }
+.status-no { background-color: var(--danger-color); }
+.permissions-container fieldset {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.permissions-container legend {
+    font-weight: bold;
+    color: var(--primary-color);
+    padding: 0 10px;
+    font-size: 1.1rem;
+}
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.permission-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.details-wrapper {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    padding: 20px;
+    background-color: #fff;
+}
+.details-section, .actions-section {
+    background-color: #fdfdfd;
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #f0f0f0;
+}
+.details-section h3, .actions-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+.detail-pair {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f7f7f7;
+}
+.detail-pair.full-width {
+    grid-column: 1 / -1;
+}
+.detail-pair strong {
+    display: block;
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 4px;
+}
+.detail-pair span, .detail-pair p {
+    font-size: 1rem;
+    color: #111;
+    margin: 0;
+}
+.attachments strong {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+.btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0 5px 10px;
+    padding: 8px 15px;
+    background-color: #34495e;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+.btn-download:hover {
+    background-color: #2c3e50;
+}
+.action-form, .print-forms {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 2px solid #f0f0f0;
+}
+.action-form .form-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.action-form .form-row label {
+    flex-basis: 150px;
+    flex-shrink: 0;
+}
+.action-form .form-row select, .action-form .form-row textarea {
+    flex-grow: 1;
+}
+.print-forms button {
+    width: 100%;
+    padding: 15px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background-color 0.3s;
+}
+.print-forms .btn-print-referral { background-color: var(--info-color); }
+.print-forms .btn-print-approval { background-color: var(--success-color); }
+.print-forms button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+.print-forms small {
+    display: block;
+    text-align: center;
+    margin-top: 5px;
+    color: #777;
+}
+.search-container {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+.search-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.search-input-group {
+    display: flex;
+    flex-grow: 1;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.search-form input[type="text"] {
+    flex-grow: 1;
+    border: none;
+    padding: 11px;
+}
+.search-form input[type="text"]:focus {
+    outline: none;
+}
+.search-form select {
+    border: none;
+    background-color: #f1f1f1;
+    border-right: 1px solid #ddd;
+    padding: 0 10px;
+}
+.search-form button {
+    padding: 11px 20px;
+    border-radius: 6px;
+}
+.search-form .clear-search {
+    padding: 11px 20px;
+    background-color: #7f8c8d;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+}
+@media (max-width: 992px) {
+    .sidebar { right: -260px; } .sidebar.active { right: 0; }
+    .main-content { margin-right: 0; padding: 20px 15px; }
+    .menu-toggle { display: block; }
+    .form-container, .table-container { padding: 20px; }
+    .main-content h1 { font-size: 1.6rem; }
+    .dashboard-widgets { gap: 15px; }
+    .widget { padding: 20px; }
+    .details-wrapper { grid-template-columns: 1fr; }
+    .search-form { flex-direction: column; align-items: stretch; }
+    .action-form .form-row { flex-direction: column; align-items: stretch; gap: 5px; }
+}
+
+
+
+/* Form Layout for index.php */
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group-half {
+    flex: 1;
+    min-width: 300px; /* Adjust as needed */
+}
+
+.form-group-half .options-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.form-group-half .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.form-group-half .radio-option input[type="radio"] {
+    margin-top: 0;
+}
+
+
+.rating-display {
+    display: flex;
+    /* Remove direction: ltr; from here */
+    align-items: center;
+    gap: 10px; /* Increased gap for better spacing */
+    justify-content: flex-end; /* This aligns the block to the right */
+}
+
+.rating-stars {
+    display: flex;
+    direction: ltr; /* Apply LTR direction only to the stars container */
+    gap: 2px;
+}
+
+.rating-display .fa-star {
+    color: #ccc; /* Default color for empty stars */
+    font-size: 1.2rem;
+}
+
+.rating-display .fa-star.rated {
+    color: #f39c12; /* Color for filled stars */
+}
+
+.rating-display .rating-text {
+    font-weight: bold;
+    color: #555;
+}
+
+/* =================================================================== */
+/* ===== FIX: Stack question and answer vertically on results page ===== */
+/* =================================================================== */
+
+/* This targets the question block ONLY inside the results page container */
+.form-container .question-block {
+    display: flex;
+    flex-direction: column; /* This is the key: stack items vertically */
+    align-items: flex-start; /* Align items to the start (right in RTL) */
+    gap: 10px; /* Adds a small space between the question and the answer */
+}
+
+/* Keep the rating display styles, but ensure it's aligned to the start */
+.answer .rating-display {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Align to the start (right in RTL) */
+    gap: 10px;
+    width: 100%; /* Ensure it takes full width of its container */
+}
+
+/* This part remains correct for ordering the stars */
+.rating-display .rating-stars {
+    display: flex;
+    direction: ltr;
+    gap: 2px;
+}
+
+.rating-display .fa-star {
+    color: #ccc;
+    font-size: 1.2rem;
+}
+
+.rating-display .fa-star.rated {
+    color: #f39c12;
+}
+
+.rating-display .rating-text {
+    font-weight: bold;
+    color: #555;
+}
+
+
+/* =================================================================== */
+/* ===== Custom Styles for Settings Page (Scoped to .settings-page) ===== */
+/* =================================================================== */
+
+/* Style for the section header */
+.settings-page .form-section-header {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.settings-page .form-section-header h3 {
+    font-size: 1.5rem;
+    color: var(--primary-color, #1a535c);
+    margin: 0;
+}
+
+/* Container for the color pickers */
+.settings-page .color-picker-group {
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+    align-items: center;
+}
+
+/* Wrapper for each individual color picker */
+.settings-page .color-picker-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-page .color-picker-wrapper label {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+/* Style the color input itself */
+.settings-page .color-picker-wrapper input[type="color"] {
+    width: 120px;
+    height: 60px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 5px;
+    cursor: pointer;
+    background-color: #fff;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Remove the default color picker arrow/text in Chrome/Edge */
+.settings-page .color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.settings-page .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+/* Style for Firefox */
+.settings-page .color-picker-wrapper input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
